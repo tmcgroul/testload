@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: portal-service-tank
+  namespace: alexey-testload
+spec:
+  containers:
+  - name: tank
+    image: yandex/yandex-tank
+    command: ["yandex-tank", "-c", "config/load.yaml", "config/ammo.txt"]
+    volumeMounts:
+    - name: config-volume
+      mountPath: /var/loadtest/config
+    - name: script-volume
+      mountPath: /var/loadtest/test
+  volumes:
+  - name: config-volume
+    configMap:
+      name: portal-service-ammo
+  - name: script-volume
+    configMap:
+      name: test-script
+  restartPolicy: Never
+  nodeSelector:
+    kubernetes.io/hostname: cc-rb-02

@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: portal-service-ammo
+  namespace: alexey-testload
+data:
+  ammo.txt: |
+    single_instruction	323000000
+    single_instruction	324000000
+    # single_instruction	325000000
+  load.yaml: |
+    phantom:
+      enabled: false
+    bfg:
+      enabled: true
+      ammofile: config/ammo.txt
+      gun_config:
+        class_name: LoadTest
+        module_path: ./test/
+        module_name: test
+      gun_type: ultimate
+      instances: 10
+      load_profile:
+        load_type: instances
+        schedule: const(2, 60s)
+      loop: 1
+    console:
+      enabled: false
+    telegraf:
+      enabled: false
