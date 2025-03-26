@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: portal-service-ammo
+  namespace: alexey-testload
+data:
+  load.yaml: |
+    phantom:
+      enabled: true
+      address: 10.233.100.28:8080
+      uris: ["/datasets/solana-beta/head"]
+      load_profile:
+        load_type: rps
+        schedule: line(300, 700, 3m)
+      timeout: 11s
+    console:
+      enabled: true
+    telegraf:
+      enabled: false

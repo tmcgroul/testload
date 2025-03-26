@@ -22,4 +22,4 @@ spec:
       name: test-script
   restartPolicy: Never
   nodeSelector:
-    kubernetes.io/hostname: cc-rb-02
+    kubernetes.io/hostname: cc-rb-03
