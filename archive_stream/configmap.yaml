@@ -5,7 +5,7 @@ metadata:
   namespace: alexey-testload
 data:
   ammo.txt: |
-    single_instruction	323000000
+    single_instruction	301267102
   load.yaml: |
     phantom:
       enabled: false

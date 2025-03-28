@@ -10,8 +10,7 @@ log = logging.getLogger(__name__)
 
 class LoadTest(object):
     def __init__(self, gun):
-        # portal-0
-        self.portal = PortalClient('http://10.233.65.33:8080/datasets/solana-beta')
+        self.archive = ArchiveClient('https://v2.archive.subsquid.io/network/solana-mainnet')
 
         # you'll be able to call gun's methods using this field:
         self.gun = gun
@@ -44,7 +43,8 @@ class LoadTest(object):
             if last_block is not None:
                 query = {**query, 'fromBlock': last_block + 1}
 
-            for block in self.portal.finalized_stream(query):
+            worker_url = self.archive.get_worker(query['fromBlock'])
+            for block in self.archive.query(worker_url, query):
                 last_block = block['header']['number']
                 yield block
 
@@ -55,8 +55,13 @@ class LoadTest(object):
                 log.info(f'Finished stream. Elapsed: {elapsed}. Speed: {progress} blocks/sec')
                 break
 
-            else:
-                log.warn('Restarting stream')
+    def setup(self, param):
+        ''' this will be executed in each worker before the test starts '''
+
+    def teardown(self):
+        ''' this will be executed in each worker after the end of the test '''
+        # It's mandatory to explicitly stop worker process in teardown
+        os._exit(0)
 
     def setup(self, param):
         ''' this will be executed in each worker before the test starts '''
@@ -67,24 +72,22 @@ class LoadTest(object):
         os._exit(0)
 
 
-class PortalClient:
+class ArchiveClient:
     def __init__(self, base_url):
         self._base_url = base_url
 
-    def finalized_stream(self, query):
-        url = self._base_url + '/finalized-stream'
-        while True:
-            with requests.post(url, json=query, stream=True) as response:
-                if response.status_code in (429, 503):
-                    log.warn(f'Got {response.status_code}')
-                    continue
-                elif response.status_code != 200:
-                    log.warn(response.text)
-                    response.raise_for_status()
-                else:
-                    for line in response.iter_lines():
-                        yield json.loads(line)
-                    break
+    def get_worker(self, block_num):
+        url = self._base_url + f'/{block_num}' + '/worker'
+        response = requests.get(url)
+        response.raise_for_status()
+        return response.text
+
+    def query(self, worker_url, query):
+        response = requests.post(worker_url, json=query)
+        if response.status_code != 200:
+          log.warn(response.text)
+        response.raise_for_status()
+        return response.json()
 
 
 ALL_FIELDS = {
@@ -123,7 +126,7 @@ ALL_FIELDS = {
     "transaction": {
         "signatures": True,
         "err": True,
-        "version": True,
+        # "version": True,
         "accountKeys": True,
         "addressTableLookups": True,
         "loadedAddresses": True,
@@ -131,9 +134,8 @@ ALL_FIELDS = {
     },
     "block": {
         "parentHash": True,
-        "parentNumber": True,
-        "number": True,
-        "height": True,
+        "parentSlot": True,
+        "slot": True,
         "timestamp": True
     }
 }
