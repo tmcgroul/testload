@@ -31,12 +31,18 @@ class LoadTest(object):
             for _ in self.run_stream(SINGLE_INS_QUERY, missile):
                 pass
 
+    def empty_query(self, missile):
+        with self.gun.measure("empty_query"):
+            for _ in self.run_stream(EMPTY_QUERY, missile):
+                pass
+
     def run_stream(self, query, missile):
         start_time = time.time()
         from_block = int(missile)
-        to_block = from_block + 100_000
+        to_block = from_block + 500_000
         query = {**query, 'fromBlock': from_block, 'toBlock': to_block}
         last_block = None
+        total_bytes = 0
 
         log.info('Starting stream')
 
@@ -44,7 +50,9 @@ class LoadTest(object):
             if last_block is not None:
                 query = {**query, 'fromBlock': last_block + 1}
 
-            for block in self.portal.finalized_stream(query):
+            for line in self.portal.finalized_stream(query):
+                total_bytes += len(line)
+                block = json.loads(line)
                 last_block = block['header']['number']
                 yield block
 
@@ -52,7 +60,8 @@ class LoadTest(object):
                 end_time = time.time()
                 elapsed = round(end_time - start_time, 1)
                 progress = round(100_000 / elapsed, 1)
-                log.info(f'Finished stream. Elapsed: {elapsed}. Speed: {progress} blocks/sec')
+                throughput = round(total_bytes / 1024 / 1024 / elapsed, 1)
+                log.info(f'Finished stream. Elapsed: {elapsed}. Speed: {progress} blocks/sec. Throughput: {throughput} MB/s')
                 break
 
             else:
@@ -72,18 +81,19 @@ class PortalClient:
         self._base_url = base_url
 
     def finalized_stream(self, query):
-        url = self._base_url + '/finalized-stream'
+        url = self._base_url + '/finalized-stream/debug?buffer_size=70'
         while True:
             with requests.post(url, json=query, stream=True) as response:
                 if response.status_code in (429, 503):
                     log.warn(f'Got {response.status_code}')
+                    time.sleep(1)
                     continue
                 elif response.status_code != 200:
                     log.warn(response.text)
                     response.raise_for_status()
                 else:
                     for line in response.iter_lines():
-                        yield json.loads(line)
+                        yield line
                     break
 
 
@@ -320,6 +330,33 @@ SINGLE_INS_QUERY = {
       "programId": [
         # "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwx1"
         "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo"
+      ]
+    }
+  ],
+}
+
+
+EMPTY_QUERY = {
+    "type": "solana",
+    "fields": ALL_FIELDS,
+    "instructions": [
+    {
+      "d8": [
+        "0xf8c69e91e17587c8",
+        "0xb59d59438fb63448",
+        "0x1c8cee63e7a21595",
+        "0x0703967f94283dc8",
+        "0x2905eeaf64e106cd",
+        "0x5e9b6797465fdca5",
+        "0xa1c26754ab47fa9a",
+        "0x5055d14818ceb16c",
+        "0x0a333d2370691855",
+        "0x1a526698f04a691a",
+        "0x2d9aedd2dd0fa65c"
+      ],
+      "isCommitted": True,
+      "programId": [
+        "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwx1"
       ]
     }
   ],

@@ -5,7 +5,11 @@ metadata:
   namespace: alexey-testload
 data:
   ammo.txt: |
-    single_instruction	323000000
+    empty_query	323000000
+    empty_query	323500000
+    empty_query	324000000
+    empty_query	324500000
+    empty_query	325000000
   load.yaml: |
     phantom:
       enabled: false
@@ -17,11 +21,11 @@ data:
         module_path: ./test/
         module_name: test
       gun_type: ultimate
-      instances: 1
+      instances: 10
       load_profile:
         load_type: instances
-        schedule: const(1, 60s)
-      loop: 1
+        schedule: const(10, 60s)
+      loop: 2
     console:
       enabled: false
     telegraf:
